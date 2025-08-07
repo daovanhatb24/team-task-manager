@@ -1,0 +1,2123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1200">
+    <title>Team Task Manager - Trello Style</title>
+    <script type="text/javascript" nonce="cd45c08a694f4c52a39f51fb98a" src="//local.adguard.org?ts=1754563352582&amp;type=content-script&amp;dmn=bj8c0bdbkd813jjn.canva-hosted-embed.com&amp;url=https%3A%2F%2Fbj8c0bdbkd813jjn.canva-hosted-embed.com%2Fcodelet%2FAAEAEGJqOGMwYmRia2Q4MTNqam4AAAAAAZiJTusgJmPAvHkAeXX_AW9KC633L5JW2Vi_FQsdOtb_OCGgYpQ%2Findex.html&amp;app=chrome.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=1"></script>
+<script type="text/javascript" nonce="cd45c08a694f4c52a39f51fb98a" src="//local.adguard.org?ts=1754563352582&amp;name=AutoPager&amp;name=AdGuard%20Extra&amp;name=AdGuard%20Popup%20Blocker&amp;type=user-script"></script><script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .drag-over {
+            background-color: #e5e7eb;
+            border: 2px dashed #9ca3af;
+        }
+        .task-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .login-container {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .app-container {
+            display: none;
+        }
+        .app-container.active {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .member-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+        }
+        .priority-high { border-left: 4px solid #ef4444; }
+        .priority-medium { border-left: 4px solid #f59e0b; }
+        .priority-low { border-left: 4px solid #10b981; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="login-container min-h-screen flex items-center justify-center px-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+            <div class="text-center mb-8">
+                <div class="bg-blue-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="text-white text-2xl font-bold">👥</span>
+                </div>
+                <h1 class="text-3xl font-bold text-gray-800 mb-2">Team Task Manager</h1>
+                <p class="text-gray-600">Collaborate like Trello</p>
+            </div>
+
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <div class="flex items-start">
+                    <span class="text-yellow-600 mr-2">⚠️</span>
+                    <div class="text-sm">
+                        <p class="font-semibold text-yellow-800 mb-1">Team Collaboration Demo</p>
+                        <p class="text-yellow-700">Advanced team features with role-based permissions</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Login/Register Toggle -->
+            <div class="flex mb-6 bg-gray-100 rounded-lg p-1">
+                <button id="loginTab" onclick="showLoginForm()" 
+                        class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors bg-white text-blue-600 shadow-sm">
+                    🔑 Sign In
+                </button>
+                <button id="registerTab" onclick="showRegisterForm()" 
+                        class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-800">
+                    ✨ Create Account
+                </button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                        <input type="text" id="username" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="Enter your username">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                        <div class="relative">
+                            <input type="password" id="password" required
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-12"
+                                   placeholder="Enter your password">
+                            <button type="button" onclick="togglePassword('password')" 
+                                    class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                                <span id="eyeIcon">👁️</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="rememberMe" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-gray-600">Remember me</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" 
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200">
+                        Sign In
+                    </button>
+                </div>
+            </form>
+
+            <!-- Register Form -->
+            <form id="registerForm" onsubmit="handleRegister(event)" style="display: none;">
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                            <input type="text" id="regFullName" required
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                   placeholder="Your full name">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                            <input type="text" id="regUsername" required
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                   placeholder="Choose username">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                        <input type="email" id="regEmail" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="your.email@company.com">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                        <div class="relative">
+                            <input type="password" id="regPassword" required
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-12"
+                                   placeholder="Create password (min 6 chars)">
+                            <button type="button" onclick="togglePassword('regPassword')" 
+                                    class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                                <span id="regEyeIcon">👁️</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+                        <div class="relative">
+                            <input type="password" id="regConfirmPassword" required
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-12"
+                                   placeholder="Confirm your password">
+                            <button type="button" onclick="togglePassword('regConfirmPassword')" 
+                                    class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                                <span id="regConfirmEyeIcon">👁️</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Request Role</label>
+                        <select id="regRole" 
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="developer">👨‍💻 Developer - Create and manage own tasks</option>
+                            <option value="viewer">👁️ Viewer - View tasks and team info</option>
+                            <option value="manager">👨‍💼 Manager - Team management (requires approval)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Department/Team</label>
+                        <select id="regDepartment" 
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="development">💻 Development</option>
+                            <option value="design">🎨 Design</option>
+                            <option value="marketing">📢 Marketing</option>
+                            <option value="sales">💼 Sales</option>
+                            <option value="support">🎧 Support</option>
+                            <option value="hr">👥 Human Resources</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-start">
+                        <input type="checkbox" id="agreeTerms" required class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        <label for="agreeTerms" class="ml-2 text-sm text-gray-600">
+                            I agree to the <a href="#" class="text-blue-600 hover:underline">Terms of Service</a> and 
+                            <a href="#" class="text-blue-600 hover:underline">Privacy Policy</a>
+                        </label>
+                    </div>
+
+                    <button type="submit" 
+                            class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200">
+                        Create Account
+                    </button>
+                </div>
+            </form>
+
+            <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                <p class="text-sm font-medium text-gray-700 mb-2">Demo Accounts & Roles:</p>
+                <div class="text-sm text-gray-600 space-y-1">
+                    <p><strong>👑 Admin:</strong> admin / admin123 (Full access)</p>
+                    <p><strong>👨‍💼 Manager:</strong> manager / manager123 (Team management)</p>
+                    <p><strong>👨‍💻 Developer:</strong> dev / dev123 (Task execution)</p>
+                    <p><strong>👁️ Viewer:</strong> viewer / viewer123 (Read only)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APPLICATION -->
+    <div id="appContainer" class="app-container">
+        <!-- Header with Team Info -->
+        <div class="bg-white shadow-sm border-b">
+            <div class="container mx-auto px-6 py-4">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center">
+                        <span class="text-2xl mr-3">👥</span>
+                        <div>
+                            <h1 class="text-xl font-bold text-gray-800">Team Task Manager</h1>
+                            <p class="text-sm text-gray-600" id="teamInfo">Loading team info...</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-600">Welcome,</span>
+                            <div class="flex items-center space-x-2">
+                                <div id="currentUserAvatar" class="member-avatar bg-blue-600"></div>
+                                <span id="currentUser" class="font-medium text-gray-800"></span>
+                                <span id="currentUserRole" class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full"></span>
+                            </div>
+                        </div>
+                        <button onclick="showCreateUserModal()" 
+                                class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                            ➕ Create User
+                        </button>
+                        <button onclick="showPermissionsModal()" 
+                                class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                            🔐 Permissions
+                        </button>
+                        <button onclick="showTeamModal()" 
+                                class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                            👥 Team
+                        </button>
+                        <button onclick="showPendingApprovals()" id="approvalsBtn"
+                                class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm transition-colors relative" style="display: none;">
+                            ⏳ Approvals
+                            <span id="pendingCount" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
+                        </button>
+                        <button onclick="logout()" 
+                                class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                            🚪 Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container mx-auto px-6 py-8">
+            <!-- Project Header -->
+            <div class="mb-8">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-800 mb-2">Project Dashboard</h2>
+                        <p class="text-gray-600">Collaborate with your team members</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-gray-600">Team Members:</span>
+                        <div id="teamAvatars" class="flex -space-x-2">
+                            <!-- Team member avatars will be populated here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h3 class="font-semibold text-blue-800 mb-2">🎯 Team Collaboration Features:</h3>
+                    <div class="text-sm text-blue-700 space-y-1">
+                        <p>• <strong>Role-based Access:</strong> Admin, Manager, Developer, Viewer permissions</p>
+                        <p>• <strong>Task Assignment:</strong> Assign tasks to specific team members</p>
+                        <p>• <strong>Team Management:</strong> Add/remove members, change roles</p>
+                        <p>• <strong>Activity Tracking:</strong> See who created and completed tasks</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Task Form (Role-based visibility) -->
+            <div id="addTaskSection" class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <h2 class="text-xl font-semibold mb-6 text-gray-800">➕ Create New Task</h2>
+                <div class="space-y-4 mb-6">
+                    <div class="grid grid-cols-2 gap-4">
+                        <input type="text" id="taskTitle" placeholder="Task title..." 
+                               class="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <select id="taskAssignee" 
+                                class="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">👤 Assign to...</option>
+                        </select>
+                    </div>
+                    <input type="text" id="taskDescription" placeholder="Description (optional)..." 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <div class="grid grid-cols-3 gap-4">
+                        <input type="date" id="taskDueDate" 
+                               class="px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <select id="taskPriority" 
+                                class="px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="low">🟢 Low Priority</option>
+                            <option value="medium" selected>🟡 Medium Priority</option>
+                            <option value="high">🔴 High Priority</option>
+                        </select>
+                        <select id="taskCategory" 
+                                class="px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="feature">🚀 Feature</option>
+                            <option value="bug">🐛 Bug Fix</option>
+                            <option value="improvement">⚡ Improvement</option>
+                            <option value="documentation">📚 Documentation</option>
+                        </select>
+                    </div>
+                </div>
+                <button onclick="addTask()" 
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors w-full text-base">
+                    Create Task
+                </button>
+            </div>
+
+            <!-- Kanban Board -->
+            <div class="grid grid-cols-3 gap-6">
+                <!-- To Do -->
+                <div class="bg-white rounded-lg shadow-md p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                            <h3 class="text-lg font-semibold text-gray-800">📋 To Do</h3>
+                        </div>
+                        <span id="todoCount" class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-sm">0</span>
+                    </div>
+                    <div id="todoColumn" class="min-h-96 space-y-3" 
+                         ondrop="drop(event, 'todo')" ondragover="allowDrop(event)">
+                    </div>
+                </div>
+
+                <!-- In Progress -->
+                <div class="bg-white rounded-lg shadow-md p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+                            <h3 class="text-lg font-semibold text-gray-800">⚡ In Progress</h3>
+                        </div>
+                        <span id="inProgressCount" class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm">0</span>
+                    </div>
+                    <div id="inProgressColumn" class="min-h-96 space-y-3" 
+                         ondrop="drop(event, 'inProgress')" ondragover="allowDrop(event)">
+                    </div>
+                </div>
+
+                <!-- Done -->
+                <div class="bg-white rounded-lg shadow-md p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                            <h3 class="text-lg font-semibold text-gray-800">✅ Done</h3>
+                        </div>
+                        <span id="doneCount" class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm">0</span>
+                    </div>
+                    <div id="doneColumn" class="min-h-96 space-y-3" 
+                         ondrop="drop(event, 'done')" ondragover="allowDrop(event)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Team Statistics -->
+            <div class="mt-8 bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-xl font-semibold mb-6 text-gray-800">📊 Team Performance</h3>
+                <div class="grid grid-cols-4 gap-6">
+                    <div class="text-center bg-blue-50 p-3 rounded-lg">
+                        <div class="text-xl sm:text-2xl font-bold text-blue-600" id="totalTasks">0</div>
+                        <div class="text-xs sm:text-sm text-gray-600">Total Tasks</div>
+                    </div>
+                    <div class="text-center bg-green-50 p-3 rounded-lg">
+                        <div class="text-xl sm:text-2xl font-bold text-green-600" id="completedTasks">0</div>
+                        <div class="text-xs sm:text-sm text-gray-600">Completed</div>
+                    </div>
+                    <div class="text-center bg-yellow-50 p-3 rounded-lg">
+                        <div class="text-xl sm:text-2xl font-bold text-yellow-600" id="activeTasks">0</div>
+                        <div class="text-xs sm:text-sm text-gray-600">Active</div>
+                    </div>
+                    <div class="text-center bg-purple-50 p-3 rounded-lg">
+                        <div class="text-xl sm:text-2xl font-bold text-purple-600" id="teamMembers">0</div>
+                        <div class="text-xs sm:text-sm text-gray-600">Team Size</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team Management Modal -->
+    <div id="teamModal" class="modal">
+        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">👥 Team Management</h2>
+                <button onclick="closeTeamModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+
+            <!-- Add Member Section (Admin/Manager only) -->
+            <div id="addMemberSection" class="mb-8 p-4 bg-gray-50 rounded-lg">
+                <h3 class="text-lg font-semibold mb-4 text-gray-800">➕ Add Team Member</h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <input type="text" id="newMemberName" placeholder="Full name..." 
+                           class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="email" id="newMemberEmail" placeholder="Email address..." 
+                           class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select id="newMemberRole" 
+                            class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="viewer">👁️ Viewer</option>
+                        <option value="developer">👨‍💻 Developer</option>
+                        <option value="manager">👨‍💼 Manager</option>
+                        <option value="admin">👑 Admin</option>
+                    </select>
+                    <button onclick="addTeamMember()" 
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                        Add Member
+                    </button>
+                </div>
+            </div>
+
+            <!-- Team Members List -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-4 text-gray-800">Current Team Members</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="text-left p-3 border-b">Member</th>
+                                <th class="text-left p-3 border-b">Role</th>
+                                <th class="text-left p-3 border-b">Tasks</th>
+                                <th class="text-left p-3 border-b">Status</th>
+                                <th class="text-left p-3 border-b">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teamMembersList">
+                            <!-- Team members will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Role Permissions Info -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 class="font-semibold text-blue-800 mb-2">🔐 Role Permissions</h4>
+                <div class="text-sm text-blue-700 space-y-1">
+                    <p><strong>👑 Admin:</strong> Full access - manage team, all tasks, settings</p>
+                    <p><strong>👨‍💼 Manager:</strong> Team management, assign tasks, view all tasks</p>
+                    <p><strong>👨‍💻 Developer:</strong> Create/edit own tasks, view team tasks</p>
+                    <p><strong>👁️ Viewer:</strong> Read-only access to tasks and team info</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Detail Modal -->
+    <div id="taskModal" class="modal">
+        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">📋 Task Details</h2>
+                <button onclick="closeTaskModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div id="taskModalContent">
+                <!-- Task details will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Create User Modal -->
+    <div id="createUserModal" class="modal">
+        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">➕ Create New User</h2>
+                <button onclick="closeCreateUserModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            
+            <form onsubmit="createNewUser(event)" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                        <input type="text" id="createUserName" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="Enter full name">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                        <input type="text" id="createUserUsername" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="Enter username">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    <input type="email" id="createUserEmail" required
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           placeholder="user@company.com">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                        <input type="password" id="createUserPassword" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="Create password">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                        <select id="createUserRole" 
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="viewer">👁️ Viewer - Read only access</option>
+                            <option value="developer">👨‍💻 Developer - Create and manage tasks</option>
+                            <option value="manager">👨‍💼 Manager - Team management</option>
+                            <option value="admin">👑 Admin - Full system access</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                    <select id="createUserDepartment" 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="development">💻 Development</option>
+                        <option value="design">🎨 Design</option>
+                        <option value="marketing">📢 Marketing</option>
+                        <option value="sales">💼 Sales</option>
+                        <option value="support">🎧 Support</option>
+                        <option value="hr">👥 Human Resources</option>
+                    </select>
+                </div>
+                
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" onclick="closeCreateUserModal()" 
+                            class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                        Create User
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Permissions Management Modal -->
+    <div id="permissionsModal" class="modal">
+        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">🔐 User Permissions Management</h2>
+                <button onclick="closePermissionsModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-4 text-gray-800">Role Permissions Overview</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                        <h4 class="font-semibold text-purple-800 mb-2">👑 Admin</h4>
+                        <ul class="text-sm text-purple-700 space-y-1">
+                            <li>✅ Full system access</li>
+                            <li>✅ Create/delete users</li>
+                            <li>✅ Manage all permissions</li>
+                            <li>✅ View all tasks and data</li>
+                            <li>✅ System configuration</li>
+                        </ul>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h4 class="font-semibold text-blue-800 mb-2">👨‍💼 Manager</h4>
+                        <ul class="text-sm text-blue-700 space-y-1">
+                            <li>✅ Team management</li>
+                            <li>✅ Assign tasks to team</li>
+                            <li>✅ View all team tasks</li>
+                            <li>✅ Create and edit tasks</li>
+                            <li>❌ System administration</li>
+                        </ul>
+                    </div>
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <h4 class="font-semibold text-green-800 mb-2">👨‍💻 Developer</h4>
+                        <ul class="text-sm text-green-700 space-y-1">
+                            <li>✅ Create own tasks</li>
+                            <li>✅ Edit assigned tasks</li>
+                            <li>✅ View assigned tasks</li>
+                            <li>❌ Team management</li>
+                            <li>❌ Assign tasks to others</li>
+                        </ul>
+                    </div>
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <h4 class="font-semibold text-gray-800 mb-2">👁️ Viewer</h4>
+                        <ul class="text-sm text-gray-700 space-y-1">
+                            <li>✅ View tasks and team info</li>
+                            <li>✅ Read project updates</li>
+                            <li>❌ Create or edit tasks</li>
+                            <li>❌ Team management</li>
+                            <li>❌ Any modifications</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-4 text-gray-800">Current User Permissions</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="text-left p-3 border-b">User</th>
+                                <th class="text-left p-3 border-b">Current Role</th>
+                                <th class="text-left p-3 border-b">Permissions</th>
+                                <th class="text-left p-3 border-b">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="permissionsUsersList">
+                            <!-- Users will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Approvals Modal -->
+    <div id="approvalsModal" class="modal">
+        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">⏳ Pending User Approvals</h2>
+                <button onclick="closeApprovalsModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            
+            <div id="pendingApprovalsList">
+                <!-- Pending approvals will be populated here -->
+            </div>
+            
+            <div id="noApprovalsMessage" class="text-center py-8 text-gray-500" style="display: none;">
+                <div class="text-4xl mb-4">✅</div>
+                <p class="text-lg">No pending approvals</p>
+                <p class="text-sm">All user registration requests have been processed.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced User System with Roles
+        const validUsers = {
+            'admin': { 
+                password: 'admin123', 
+                role: 'admin', 
+                name: 'Admin User',
+                email: 'admin@company.com',
+                avatar: 'A',
+                permissions: ['all']
+            },
+            'manager': { 
+                password: 'manager123', 
+                role: 'manager', 
+                name: 'Project Manager',
+                email: 'manager@company.com',
+                avatar: 'M',
+                permissions: ['manage_team', 'assign_tasks', 'view_all', 'create_tasks']
+            },
+            'dev': { 
+                password: 'dev123', 
+                role: 'developer', 
+                name: 'Developer',
+                email: 'dev@company.com',
+                avatar: 'D',
+                permissions: ['create_tasks', 'edit_own', 'view_assigned']
+            },
+            'viewer': { 
+                password: 'viewer123', 
+                role: 'viewer', 
+                name: 'Viewer User',
+                email: 'viewer@company.com',
+                avatar: 'V',
+                permissions: ['view_only']
+            }
+        };
+
+        let currentUser = null;
+        let sessionTimeout = null;
+        let taskIdCounter = 1;
+        let memberIdCounter = 5;
+
+        // Enhanced task structure
+        let tasks = {
+            todo: [],
+            inProgress: [],
+            done: []
+        };
+
+        // Team members (initialized with demo users)
+        let teamMembers = {
+            'admin': validUsers.admin,
+            'manager': validUsers.manager,
+            'dev': validUsers.dev,
+            'viewer': validUsers.viewer
+        };
+
+        // Pending user registrations
+        let pendingRegistrations = [];
+
+        // Registered users storage
+        let registeredUsers = {};
+
+        // Permission checking
+        function hasPermission(permission) {
+            if (!currentUser) return false;
+            return currentUser.permissions.includes('all') || currentUser.permissions.includes(permission);
+        }
+
+        // Check session and initialize
+        function checkSession() {
+            const savedSession = localStorage.getItem('teamTaskManagerSession');
+            if (savedSession) {
+                const session = JSON.parse(savedSession);
+                const now = new Date().getTime();
+                
+                if (now - session.timestamp < 24 * 60 * 60 * 1000) {
+                    currentUser = session.user;
+                    showApp();
+                    startSessionTimer();
+                    return;
+                }
+            }
+            showLogin();
+        }
+
+        // Enhanced login handling
+        function handleLogin(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
+            
+            if (validateLogin(username, password)) {
+                currentUser = {
+                    username: username,
+                    name: validUsers[username].name,
+                    role: validUsers[username].role,
+                    email: validUsers[username].email,
+                    avatar: validUsers[username].avatar,
+                    permissions: validUsers[username].permissions
+                };
+                
+                if (rememberMe) {
+                    const session = {
+                        user: currentUser,
+                        timestamp: new Date().getTime()
+                    };
+                    localStorage.setItem('teamTaskManagerSession', JSON.stringify(session));
+                }
+                
+                showApp();
+                startSessionTimer();
+                showSuccessMessage('Login successful! Welcome to your team workspace.');
+            } else {
+                showErrorMessage('Invalid credentials. Please check your username and password.');
+                document.getElementById('password').value = '';
+            }
+        }
+
+        function validateLogin(username, password) {
+            // Check demo users first
+            if (validUsers[username] && validUsers[username].password === password) {
+                return true;
+            }
+            // Check registered users
+            if (registeredUsers[username] && registeredUsers[username].password === password && registeredUsers[username].status === 'approved') {
+                return true;
+            }
+            return false;
+        }
+
+        // Form switching functions
+        function showLoginForm() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('loginTab').className = 'flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors bg-white text-blue-600 shadow-sm';
+            document.getElementById('registerTab').className = 'flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-800';
+        }
+
+        function showRegisterForm() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+            document.getElementById('loginTab').className = 'flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-800';
+            document.getElementById('registerTab').className = 'flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors bg-white text-blue-600 shadow-sm';
+        }
+
+        // Registration handling
+        function handleRegister(event) {
+            event.preventDefault();
+            
+            const fullName = document.getElementById('regFullName').value.trim();
+            const username = document.getElementById('regUsername').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const confirmPassword = document.getElementById('regConfirmPassword').value;
+            const role = document.getElementById('regRole').value;
+            const department = document.getElementById('regDepartment').value;
+            
+            // Validation
+            if (password.length < 6) {
+                showErrorMessage('Password must be at least 6 characters long.');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showErrorMessage('Passwords do not match.');
+                return;
+            }
+            
+            if (validUsers[username] || registeredUsers[username]) {
+                showErrorMessage('Username already exists. Please choose a different username.');
+                return;
+            }
+            
+            // Check if email already exists
+            const emailExists = Object.values(registeredUsers).some(user => user.email === email) ||
+                               Object.values(validUsers).some(user => user.email === email);
+            
+            if (emailExists) {
+                showErrorMessage('Email address already registered.');
+                return;
+            }
+            
+            // Create registration request
+            const registrationId = Date.now().toString();
+            const registration = {
+                id: registrationId,
+                fullName: fullName,
+                username: username,
+                email: email,
+                password: password,
+                requestedRole: role,
+                department: department,
+                requestDate: new Date().toLocaleDateString(),
+                status: role === 'manager' ? 'pending' : 'auto-approved'
+            };
+            
+            if (role === 'manager') {
+                // Manager role requires approval
+                pendingRegistrations.push(registration);
+                showSuccessMessage('Registration submitted! Manager role requires admin approval. You will be notified once approved.');
+            } else {
+                // Auto-approve developer and viewer roles
+                const permissions = {
+                    'viewer': ['view_only'],
+                    'developer': ['create_tasks', 'edit_own', 'view_assigned']
+                };
+                
+                registeredUsers[username] = {
+                    name: fullName,
+                    email: email,
+                    password: password,
+                    role: role,
+                    avatar: fullName.charAt(0).toUpperCase(),
+                    permissions: permissions[role],
+                    department: department,
+                    joinedAt: new Date().toLocaleDateString(),
+                    status: 'approved'
+                };
+                
+                // Add to team members
+                teamMembers[username] = registeredUsers[username];
+                
+                showSuccessMessage('Account created successfully! You can now sign in.');
+                showLoginForm();
+            }
+            
+            // Clear form
+            document.getElementById('registerForm').reset();
+            
+            // Save data
+            savePendingRegistrations();
+            saveRegisteredUsers();
+            updatePendingApprovalsButton();
+        }
+
+        function showLogin() {
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('appContainer').classList.remove('active');
+            document.getElementById('username').focus();
+        }
+
+        function showApp() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('appContainer').classList.add('active');
+            
+            // Get user info from appropriate source
+            let userInfo = validUsers[currentUser.username] || registeredUsers[currentUser.username];
+            
+            // Update user info
+            document.getElementById('currentUser').textContent = userInfo.name;
+            document.getElementById('currentUserRole').textContent = userInfo.role.toUpperCase();
+            document.getElementById('currentUserAvatar').textContent = userInfo.avatar;
+            
+            // Update team info
+            const teamSize = Object.keys(teamMembers).length;
+            document.getElementById('teamInfo').textContent = `${teamSize} team members • ${userInfo.role} access`;
+            
+            // Setup role-based UI
+            setupRoleBasedUI();
+            
+            // Load data
+            loadTeamData();
+            populateAssigneeDropdown();
+            updateTeamAvatars();
+            renderTasks();
+            updateStats();
+            updatePendingApprovalsButton();
+        }
+
+        function setupRoleBasedUI() {
+            const addTaskSection = document.getElementById('addTaskSection');
+            const addMemberSection = document.getElementById('addMemberSection');
+            
+            // Hide task creation for viewers
+            if (!hasPermission('create_tasks')) {
+                addTaskSection.style.display = 'none';
+            }
+            
+            // Hide member management for non-managers
+            if (!hasPermission('manage_team')) {
+                addMemberSection.style.display = 'none';
+            }
+            
+            // Show/hide admin buttons
+            const createUserBtn = document.querySelector('button[onclick="showCreateUserModal()"]');
+            const permissionsBtn = document.querySelector('button[onclick="showPermissionsModal()"]');
+            
+            if (createUserBtn) {
+                createUserBtn.style.display = hasPermission('all') ? 'block' : 'none';
+            }
+            
+            if (permissionsBtn) {
+                permissionsBtn.style.display = (hasPermission('all') || hasPermission('manage_team')) ? 'block' : 'none';
+            }
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.removeItem('teamTaskManagerSession');
+                localStorage.removeItem('teamTasks');
+                localStorage.removeItem('teamMembers');
+                
+                if (sessionTimeout) clearTimeout(sessionTimeout);
+                
+                currentUser = null;
+                tasks = { todo: [], inProgress: [], done: [] };
+                taskIdCounter = 1;
+                
+                showLogin();
+                showSuccessMessage('Logged out successfully.');
+            }
+        }
+
+        function startSessionTimer() {
+            if (sessionTimeout) clearTimeout(sessionTimeout);
+            sessionTimeout = setTimeout(() => {
+                alert('Session expired due to inactivity. Please login again.');
+                logout();
+            }, 2 * 60 * 60 * 1000);
+        }
+
+        function resetSessionTimer() {
+            if (currentUser) startSessionTimer();
+        }
+
+        // Enhanced task creation with assignment
+        function addTask() {
+            if (!hasPermission('create_tasks')) {
+                showErrorMessage('You do not have permission to create tasks.');
+                return;
+            }
+
+            const titleInput = document.getElementById('taskTitle');
+            const descriptionInput = document.getElementById('taskDescription');
+            const dueDateInput = document.getElementById('taskDueDate');
+            const priorityInput = document.getElementById('taskPriority');
+            const assigneeInput = document.getElementById('taskAssignee');
+            const categoryInput = document.getElementById('taskCategory');
+            
+            const title = titleInput.value.trim();
+            const description = descriptionInput.value.trim();
+            const dueDate = dueDateInput.value;
+            const priority = priorityInput.value;
+            const assignee = assigneeInput.value;
+            const category = categoryInput.value;
+            
+            if (!title) {
+                showErrorMessage('Please enter a task title');
+                return;
+            }
+            
+            const task = {
+                id: taskIdCounter++,
+                title: title,
+                description: description,
+                dueDate: dueDate,
+                priority: priority,
+                assignee: assignee,
+                category: category,
+                createdAt: new Date().toLocaleDateString(),
+                createdBy: currentUser.username,
+                completedAt: null,
+                completedBy: null,
+                comments: [],
+                attachments: []
+            };
+            
+            tasks.todo.push(task);
+            
+            // Clear form
+            titleInput.value = '';
+            descriptionInput.value = '';
+            dueDateInput.value = '';
+            priorityInput.value = 'medium';
+            assigneeInput.value = '';
+            categoryInput.value = 'feature';
+            
+            renderTasks();
+            updateStats();
+            saveTeamData();
+            
+            showSuccessMessage(`Task "${title}" created successfully!`);
+        }
+
+        // Enhanced task card creation
+        function createTaskCard(task) {
+            const priorityColors = {
+                low: 'bg-green-100 text-green-800 border-green-300',
+                medium: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+                high: 'bg-red-100 text-red-800 border-red-300'
+            };
+            
+            const priorityIcons = { low: '🟢', medium: '🟡', high: '🔴' };
+            const categoryIcons = { 
+                feature: '🚀', 
+                bug: '🐛', 
+                improvement: '⚡', 
+                documentation: '📚' 
+            };
+            
+            const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !task.completedAt;
+            const isDueToday = task.dueDate && new Date(task.dueDate).toDateString() === new Date().toDateString();
+            
+            const assignedMember = task.assignee ? teamMembers[task.assignee] : null;
+            const createdMember = teamMembers[task.createdBy];
+            
+            const canEdit = hasPermission('all') || 
+                           (hasPermission('edit_own') && task.createdBy === currentUser.username) ||
+                           (hasPermission('assign_tasks'));
+            
+            return `
+                <div class="task-card bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4 cursor-move priority-${task.priority} ${isOverdue ? 'border-red-400 bg-red-50' : ''}" 
+                     draggable="true" ondragstart="drag(event, ${task.id})"
+                     onclick="showTaskDetail(${task.id})">
+                    
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex items-center space-x-2 flex-1">
+                            <span class="text-lg">${categoryIcons[task.category]}</span>
+                            <h4 class="font-medium text-gray-800 text-sm sm:text-base">${task.title}</h4>
+                        </div>
+                        <div class="flex items-center gap-1 flex-shrink-0">
+                            ${canEdit ? getTaskActionButtons(task) : ''}
+                        </div>
+                    </div>
+                    
+                    ${task.description ? `<p class="text-xs sm:text-sm text-gray-600 mb-2">${task.description}</p>` : ''}
+                    
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2 py-1 rounded-full ${priorityColors[task.priority]} text-xs border">
+                                ${priorityIcons[task.priority]} ${task.priority.toUpperCase()}
+                            </span>
+                            ${isOverdue ? '<span class="text-red-600 font-bold text-xs">⚠️ OVERDUE</span>' : ''}
+                            ${isDueToday ? '<span class="text-orange-600 font-bold text-xs">📅 TODAY</span>' : ''}
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between text-xs text-gray-500">
+                        <div class="flex items-center space-x-2">
+                            ${assignedMember ? `
+                                <div class="flex items-center space-x-1">
+                                    <div class="member-avatar bg-blue-600 w-6 h-6 text-xs">${assignedMember.avatar}</div>
+                                    <span>Assigned to ${assignedMember.name}</span>
+                                </div>
+                            ` : '<span>Unassigned</span>'}
+                        </div>
+                        <div class="text-right">
+                            ${task.dueDate ? `📅 ${new Date(task.dueDate).toLocaleDateString()}` : ''}
+                            <div class="text-xs text-gray-400">by ${createdMember ? createdMember.name : 'Unknown'}</div>
+                        </div>
+                    </div>
+                    
+                    ${task.completedAt ? `
+                        <div class="text-xs text-green-600 mt-2 p-2 bg-green-50 rounded">
+                            ✅ Completed: ${task.completedAt} by ${teamMembers[task.completedBy]?.name || 'Unknown'}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function getTaskActionButtons(task) {
+            const currentStatus = getCurrentTaskStatus(task.id);
+            let buttons = '';
+            
+            if (currentStatus === 'todo') {
+                buttons += `<button onclick="event.stopPropagation(); moveTask(${task.id}, 'inProgress')" 
+                                   class="text-blue-600 hover:text-blue-800 hover:bg-blue-100 px-2 py-1 rounded text-sm border border-blue-300" title="Start Task">
+                                ▶️
+                            </button>`;
+            } else if (currentStatus === 'inProgress') {
+                buttons += `<button onclick="event.stopPropagation(); moveTask(${task.id}, 'todo')" 
+                                   class="text-orange-600 hover:text-orange-800 hover:bg-orange-100 px-2 py-1 rounded text-sm border border-orange-300" title="Move to Todo">
+                                ◀️
+                            </button>`;
+            }
+            
+            buttons += `<button onclick="event.stopPropagation(); markComplete(${task.id})" 
+                               class="text-green-600 hover:text-green-800 hover:bg-green-100 px-2 py-1 rounded text-sm border border-green-300" title="Complete">
+                            ✓
+                        </button>`;
+            
+            if (hasPermission('all') || task.createdBy === currentUser.username) {
+                buttons += `<button onclick="event.stopPropagation(); deleteTask(${task.id})" 
+                                   class="text-red-500 hover:text-red-700 hover:bg-red-100 px-2 py-1 rounded text-sm border border-red-300" title="Delete">
+                                🗑️
+                            </button>`;
+            }
+            
+            return buttons;
+        }
+
+        function getCurrentTaskStatus(taskId) {
+            for (let status in tasks) {
+                if (tasks[status].find(task => task.id === taskId)) {
+                    return status;
+                }
+            }
+            return null;
+        }
+
+        function moveTask(taskId, newStatus) {
+            let taskToMove = null;
+            
+            for (let status in tasks) {
+                const taskIndex = tasks[status].findIndex(task => task.id === taskId);
+                if (taskIndex !== -1) {
+                    taskToMove = tasks[status][taskIndex];
+                    tasks[status].splice(taskIndex, 1);
+                    break;
+                }
+            }
+            
+            if (taskToMove) {
+                tasks[newStatus].push(taskToMove);
+                renderTasks();
+                updateStats();
+                saveTeamData();
+            }
+        }
+
+        function markComplete(taskId) {
+            let taskToComplete = null;
+            
+            for (let status of ['todo', 'inProgress']) {
+                const taskIndex = tasks[status].findIndex(task => task.id === taskId);
+                if (taskIndex !== -1) {
+                    taskToComplete = tasks[status][taskIndex];
+                    tasks[status].splice(taskIndex, 1);
+                    break;
+                }
+            }
+            
+            if (taskToComplete) {
+                taskToComplete.completedAt = new Date().toLocaleDateString();
+                taskToComplete.completedBy = currentUser.username;
+                tasks.done.push(taskToComplete);
+                renderTasks();
+                updateStats();
+                saveTeamData();
+                
+                showSuccessMessage(`Task "${taskToComplete.title}" completed!`);
+            }
+        }
+
+        function deleteTask(taskId) {
+            if (!confirm('Are you sure you want to delete this task?')) return;
+            
+            let taskDeleted = false;
+            
+            for (let status in tasks) {
+                const taskIndex = tasks[status].findIndex(task => task.id === taskId);
+                if (taskIndex !== -1) {
+                    tasks[status].splice(taskIndex, 1);
+                    taskDeleted = true;
+                    break;
+                }
+            }
+            
+            if (taskDeleted) {
+                renderTasks();
+                updateStats();
+                saveTeamData();
+                showSuccessMessage('Task deleted successfully!');
+            }
+        }
+
+        // Team Management Functions
+        function showTeamModal() {
+            document.getElementById('teamModal').classList.add('active');
+            populateTeamMembersList();
+        }
+
+        function closeTeamModal() {
+            document.getElementById('teamModal').classList.remove('active');
+        }
+
+        function addTeamMember() {
+            if (!hasPermission('manage_team')) {
+                showErrorMessage('You do not have permission to manage team members.');
+                return;
+            }
+
+            const name = document.getElementById('newMemberName').value.trim();
+            const email = document.getElementById('newMemberEmail').value.trim();
+            const role = document.getElementById('newMemberRole').value;
+            
+            if (!name || !email) {
+                showErrorMessage('Please fill in all fields.');
+                return;
+            }
+            
+            const username = `member${memberIdCounter++}`;
+            const avatar = name.charAt(0).toUpperCase();
+            
+            const permissions = {
+                'viewer': ['view_only'],
+                'developer': ['create_tasks', 'edit_own', 'view_assigned'],
+                'manager': ['manage_team', 'assign_tasks', 'view_all', 'create_tasks'],
+                'admin': ['all']
+            };
+            
+            teamMembers[username] = {
+                name: name,
+                email: email,
+                role: role,
+                avatar: avatar,
+                permissions: permissions[role],
+                joinedAt: new Date().toLocaleDateString(),
+                status: 'active'
+            };
+            
+            // Clear form
+            document.getElementById('newMemberName').value = '';
+            document.getElementById('newMemberEmail').value = '';
+            document.getElementById('newMemberRole').value = 'viewer';
+            
+            populateTeamMembersList();
+            populateAssigneeDropdown();
+            updateTeamAvatars();
+            updateStats();
+            saveTeamData();
+            
+            showSuccessMessage(`${name} has been added to the team!`);
+        }
+
+        function populateTeamMembersList() {
+            const tbody = document.getElementById('teamMembersList');
+            tbody.innerHTML = '';
+            
+            Object.entries(teamMembers).forEach(([username, member]) => {
+                const memberTasks = getAllTasks().filter(task => 
+                    task.assignee === username || task.createdBy === username
+                ).length;
+                
+                const canManage = hasPermission('manage_team') && username !== currentUser.username;
+                
+                const row = document.createElement('tr');
+                row.className = 'border-b hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="p-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="member-avatar bg-blue-600">${member.avatar}</div>
+                            <div>
+                                <div class="font-medium text-gray-800">${member.name}</div>
+                                <div class="text-sm text-gray-600">${member.email}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-3">
+                        <span class="px-2 py-1 rounded-full text-xs font-medium
+                            ${member.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                              member.role === 'manager' ? 'bg-blue-100 text-blue-800' :
+                              member.role === 'developer' ? 'bg-green-100 text-green-800' :
+                              'bg-gray-100 text-gray-800'}">
+                            ${member.role === 'admin' ? '👑' : 
+                              member.role === 'manager' ? '👨‍💼' :
+                              member.role === 'developer' ? '👨‍💻' : '👁️'} 
+                            ${member.role.toUpperCase()}
+                        </span>
+                    </td>
+                    <td class="p-3">
+                        <span class="text-sm text-gray-600">${memberTasks} tasks</span>
+                    </td>
+                    <td class="p-3">
+                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            ✅ Active
+                        </span>
+                    </td>
+                    <td class="p-3">
+                        ${canManage ? `
+                            <div class="flex space-x-2">
+                                <button onclick="changeUserRole('${username}')" 
+                                        class="text-blue-600 hover:text-blue-800 text-sm">
+                                    Edit Role
+                                </button>
+                                <button onclick="removeTeamMember('${username}')" 
+                                        class="text-red-600 hover:text-red-800 text-sm">
+                                    Remove
+                                </button>
+                            </div>
+                        ` : '<span class="text-gray-400 text-sm">-</span>'}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function removeTeamMember(username) {
+            if (!hasPermission('manage_team')) {
+                showErrorMessage('You do not have permission to remove team members.');
+                return;
+            }
+            
+            const member = teamMembers[username];
+            if (!member) return;
+            
+            if (confirm(`Are you sure you want to remove ${member.name} from the team?`)) {
+                delete teamMembers[username];
+                
+                // Unassign tasks from removed member
+                getAllTasks().forEach(task => {
+                    if (task.assignee === username) {
+                        task.assignee = '';
+                    }
+                });
+                
+                populateTeamMembersList();
+                populateAssigneeDropdown();
+                updateTeamAvatars();
+                updateStats();
+                saveTeamData();
+                renderTasks();
+                
+                showSuccessMessage(`${member.name} has been removed from the team.`);
+            }
+        }
+
+        function changeUserRole(username) {
+            const member = teamMembers[username];
+            if (!member) return;
+            
+            const newRole = prompt(`Change role for ${member.name}:\n\nCurrent: ${member.role}\n\nEnter new role (admin/manager/developer/viewer):`, member.role);
+            
+            if (newRole && ['admin', 'manager', 'developer', 'viewer'].includes(newRole.toLowerCase())) {
+                const permissions = {
+                    'viewer': ['view_only'],
+                    'developer': ['create_tasks', 'edit_own', 'view_assigned'],
+                    'manager': ['manage_team', 'assign_tasks', 'view_all', 'create_tasks'],
+                    'admin': ['all']
+                };
+                
+                member.role = newRole.toLowerCase();
+                member.permissions = permissions[newRole.toLowerCase()];
+                
+                populateTeamMembersList();
+                saveTeamData();
+                
+                showSuccessMessage(`${member.name}'s role has been changed to ${newRole}.`);
+            }
+        }
+
+        // Task Detail Modal
+        function showTaskDetail(taskId) {
+            const task = getAllTasks().find(t => t.id === taskId);
+            if (!task) return;
+            
+            const assignedMember = task.assignee ? teamMembers[task.assignee] : null;
+            const createdMember = teamMembers[task.createdBy];
+            const completedMember = task.completedBy ? teamMembers[task.completedBy] : null;
+            
+            const categoryIcons = { 
+                feature: '🚀', 
+                bug: '🐛', 
+                improvement: '⚡', 
+                documentation: '📚' 
+            };
+            
+            const priorityColors = {
+                low: 'bg-green-100 text-green-800',
+                medium: 'bg-yellow-100 text-yellow-800',
+                high: 'bg-red-100 text-red-800'
+            };
+            
+            document.getElementById('taskModalContent').innerHTML = `
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-2xl">${categoryIcons[task.category]}</span>
+                        <h3 class="text-xl font-bold text-gray-800">${task.title}</h3>
+                        <span class="px-3 py-1 rounded-full ${priorityColors[task.priority]} text-sm font-medium">
+                            ${task.priority.toUpperCase()} PRIORITY
+                        </span>
+                    </div>
+                    
+                    ${task.description ? `
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-2">Description</h4>
+                            <p class="text-gray-600 bg-gray-50 p-3 rounded-lg">${task.description}</p>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-2">Assignment</h4>
+                            <div class="bg-gray-50 p-3 rounded-lg">
+                                ${assignedMember ? `
+                                    <div class="flex items-center space-x-2">
+                                        <div class="member-avatar bg-blue-600">${assignedMember.avatar}</div>
+                                        <div>
+                                            <div class="font-medium">${assignedMember.name}</div>
+                                            <div class="text-sm text-gray-600">${assignedMember.role}</div>
+                                        </div>
+                                    </div>
+                                ` : '<span class="text-gray-500">Unassigned</span>'}
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-2">Timeline</h4>
+                            <div class="bg-gray-50 p-3 rounded-lg text-sm">
+                                <div>Created: ${task.createdAt} by ${createdMember?.name || 'Unknown'}</div>
+                                ${task.dueDate ? `<div>Due: ${new Date(task.dueDate).toLocaleDateString()}</div>` : ''}
+                                ${task.completedAt ? `<div>Completed: ${task.completedAt} by ${completedMember?.name || 'Unknown'}</div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h4 class="font-semibold text-gray-700 mb-2">Status</h4>
+                        <div class="flex space-x-2">
+                            <span class="px-3 py-1 rounded-full text-sm font-medium
+                                ${getCurrentTaskStatus(task.id) === 'todo' ? 'bg-red-100 text-red-800' :
+                                  getCurrentTaskStatus(task.id) === 'inProgress' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-green-100 text-green-800'}">
+                                ${getCurrentTaskStatus(task.id) === 'todo' ? '📋 TO DO' :
+                                  getCurrentTaskStatus(task.id) === 'inProgress' ? '⚡ IN PROGRESS' :
+                                  '✅ COMPLETED'}
+                            </span>
+                            <span class="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                                ${categoryIcons[task.category]} ${task.category.toUpperCase()}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('taskModal').classList.add('active');
+        }
+
+        function closeTaskModal() {
+            document.getElementById('taskModal').classList.remove('active');
+        }
+
+        // Utility Functions
+        function getAllTasks() {
+            return [...tasks.todo, ...tasks.inProgress, ...tasks.done];
+        }
+
+        function populateAssigneeDropdown() {
+            const select = document.getElementById('taskAssignee');
+            select.innerHTML = '<option value="">👤 Assign to...</option>';
+            
+            Object.entries(teamMembers).forEach(([username, member]) => {
+                const option = document.createElement('option');
+                option.value = username;
+                option.textContent = `${member.avatar} ${member.name} (${member.role})`;
+                select.appendChild(option);
+            });
+        }
+
+        function updateTeamAvatars() {
+            const container = document.getElementById('teamAvatars');
+            container.innerHTML = '';
+            
+            Object.values(teamMembers).slice(0, 5).forEach(member => {
+                const avatar = document.createElement('div');
+                avatar.className = 'member-avatar bg-blue-600 border-2 border-white';
+                avatar.textContent = member.avatar;
+                avatar.title = member.name;
+                container.appendChild(avatar);
+            });
+            
+            if (Object.keys(teamMembers).length > 5) {
+                const more = document.createElement('div');
+                more.className = 'member-avatar bg-gray-600 border-2 border-white text-xs';
+                more.textContent = `+${Object.keys(teamMembers).length - 5}`;
+                more.title = `${Object.keys(teamMembers).length - 5} more members`;
+                container.appendChild(more);
+            }
+        }
+
+        function renderTasks() {
+            const todoColumn = document.getElementById('todoColumn');
+            const inProgressColumn = document.getElementById('inProgressColumn');
+            const doneColumn = document.getElementById('doneColumn');
+            
+            // Filter tasks based on permissions
+            let visibleTasks = { todo: [], inProgress: [], done: [] };
+            
+            if (hasPermission('view_all') || hasPermission('all')) {
+                visibleTasks = tasks;
+            } else if (hasPermission('view_assigned')) {
+                Object.keys(tasks).forEach(status => {
+                    visibleTasks[status] = tasks[status].filter(task => 
+                        task.assignee === currentUser.username || 
+                        task.createdBy === currentUser.username
+                    );
+                });
+            }
+            
+            todoColumn.innerHTML = visibleTasks.todo.map(createTaskCard).join('');
+            inProgressColumn.innerHTML = visibleTasks.inProgress.map(createTaskCard).join('');
+            doneColumn.innerHTML = visibleTasks.done.map(createTaskCard).join('');
+            
+            // Update counters
+            document.getElementById('todoCount').textContent = visibleTasks.todo.length;
+            document.getElementById('inProgressCount').textContent = visibleTasks.inProgress.length;
+            document.getElementById('doneCount').textContent = visibleTasks.done.length;
+        }
+
+        function updateStats() {
+            const allTasks = getAllTasks();
+            const totalTasks = allTasks.length;
+            const completedTasks = tasks.done.length;
+            const activeTasks = tasks.todo.length + tasks.inProgress.length;
+            const teamSize = Object.keys(teamMembers).length;
+            
+            document.getElementById('totalTasks').textContent = totalTasks;
+            document.getElementById('completedTasks').textContent = completedTasks;
+            document.getElementById('activeTasks').textContent = activeTasks;
+            document.getElementById('teamMembers').textContent = teamSize;
+        }
+
+        // Data persistence
+        function saveTeamData() {
+            localStorage.setItem('teamTasks', JSON.stringify(tasks));
+            localStorage.setItem('teamMembers', JSON.stringify(teamMembers));
+            localStorage.setItem('taskIdCounter', taskIdCounter.toString());
+            localStorage.setItem('memberIdCounter', memberIdCounter.toString());
+        }
+
+        function loadTeamData() {
+            const savedTasks = localStorage.getItem('teamTasks');
+            const savedMembers = localStorage.getItem('teamMembers');
+            const savedTaskCounter = localStorage.getItem('taskIdCounter');
+            const savedMemberCounter = localStorage.getItem('memberIdCounter');
+            
+            if (savedTasks) {
+                tasks = JSON.parse(savedTasks);
+            }
+            
+            if (savedMembers) {
+                teamMembers = { ...teamMembers, ...JSON.parse(savedMembers) };
+            }
+            
+            if (savedTaskCounter) {
+                taskIdCounter = parseInt(savedTaskCounter);
+            }
+            
+            if (savedMemberCounter) {
+                memberIdCounter = parseInt(savedMemberCounter);
+            }
+        }
+
+        function saveRegisteredUsers() {
+            localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
+        }
+
+        function loadRegisteredUsers() {
+            const saved = localStorage.getItem('registeredUsers');
+            if (saved) {
+                registeredUsers = JSON.parse(saved);
+                // Merge registered users into team members
+                Object.keys(registeredUsers).forEach(username => {
+                    if (registeredUsers[username].status === 'approved') {
+                        teamMembers[username] = registeredUsers[username];
+                    }
+                });
+            }
+        }
+
+        function savePendingRegistrations() {
+            localStorage.setItem('pendingRegistrations', JSON.stringify(pendingRegistrations));
+        }
+
+        function loadPendingRegistrations() {
+            const saved = localStorage.getItem('pendingRegistrations');
+            if (saved) {
+                pendingRegistrations = JSON.parse(saved);
+            }
+        }
+
+        // Drag and Drop
+        function allowDrop(ev) {
+            ev.preventDefault();
+            ev.currentTarget.classList.add('drag-over');
+        }
+
+        function drag(ev, taskId) {
+            ev.dataTransfer.setData("taskId", taskId);
+        }
+
+        function drop(ev, newStatus) {
+            ev.preventDefault();
+            ev.currentTarget.classList.remove('drag-over');
+            
+            const taskId = parseInt(ev.dataTransfer.getData("taskId"));
+            moveTask(taskId, newStatus);
+        }
+
+        // Create User Modal Functions
+        function showCreateUserModal() {
+            if (!hasPermission('all')) {
+                showErrorMessage('You do not have permission to create users.');
+                return;
+            }
+            document.getElementById('createUserModal').classList.add('active');
+        }
+
+        function closeCreateUserModal() {
+            document.getElementById('createUserModal').classList.remove('active');
+            // Clear form
+            document.getElementById('createUserName').value = '';
+            document.getElementById('createUserUsername').value = '';
+            document.getElementById('createUserEmail').value = '';
+            document.getElementById('createUserPassword').value = '';
+            document.getElementById('createUserRole').value = 'viewer';
+            document.getElementById('createUserDepartment').value = 'development';
+        }
+
+        function createNewUser(event) {
+            event.preventDefault();
+            
+            if (!hasPermission('all')) {
+                showErrorMessage('You do not have permission to create users.');
+                return;
+            }
+            
+            const name = document.getElementById('createUserName').value.trim();
+            const username = document.getElementById('createUserUsername').value.trim();
+            const email = document.getElementById('createUserEmail').value.trim();
+            const password = document.getElementById('createUserPassword').value;
+            const role = document.getElementById('createUserRole').value;
+            const department = document.getElementById('createUserDepartment').value;
+            
+            // Validation
+            if (validUsers[username] || registeredUsers[username] || teamMembers[username]) {
+                showErrorMessage('Username already exists. Please choose a different username.');
+                return;
+            }
+            
+            const emailExists = Object.values(teamMembers).some(user => user.email === email);
+            if (emailExists) {
+                showErrorMessage('Email address already exists.');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showErrorMessage('Password must be at least 6 characters long.');
+                return;
+            }
+            
+            // Create user
+            const permissions = {
+                'viewer': ['view_only'],
+                'developer': ['create_tasks', 'edit_own', 'view_assigned'],
+                'manager': ['manage_team', 'assign_tasks', 'view_all', 'create_tasks'],
+                'admin': ['all']
+            };
+            
+            const newUser = {
+                name: name,
+                email: email,
+                password: password,
+                role: role,
+                avatar: name.charAt(0).toUpperCase(),
+                permissions: permissions[role],
+                department: department,
+                joinedAt: new Date().toLocaleDateString(),
+                status: 'active'
+            };
+            
+            // Add to both systems
+            registeredUsers[username] = newUser;
+            teamMembers[username] = newUser;
+            
+            // Update UI
+            closeCreateUserModal();
+            populateTeamMembersList();
+            populateAssigneeDropdown();
+            updateTeamAvatars();
+            updateStats();
+            populatePermissionsUsersList();
+            
+            // Save data
+            saveRegisteredUsers();
+            saveTeamData();
+            
+            showSuccessMessage(`User ${name} has been created successfully!`);
+        }
+
+        // Permissions Modal Functions
+        function showPermissionsModal() {
+            if (!hasPermission('all') && !hasPermission('manage_team')) {
+                showErrorMessage('You do not have permission to view permissions.');
+                return;
+            }
+            document.getElementById('permissionsModal').classList.add('active');
+            populatePermissionsUsersList();
+        }
+
+        function closePermissionsModal() {
+            document.getElementById('permissionsModal').classList.remove('active');
+        }
+
+        function populatePermissionsUsersList() {
+            const tbody = document.getElementById('permissionsUsersList');
+            tbody.innerHTML = '';
+            
+            Object.entries(teamMembers).forEach(([username, member]) => {
+                const permissionsList = member.permissions.includes('all') ? 
+                    'Full System Access' : 
+                    member.permissions.map(p => p.replace('_', ' ')).join(', ');
+                
+                const canEdit = hasPermission('all') && username !== currentUser.username;
+                
+                const row = document.createElement('tr');
+                row.className = 'border-b hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="p-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="member-avatar bg-blue-600">${member.avatar}</div>
+                            <div>
+                                <div class="font-medium text-gray-800">${member.name}</div>
+                                <div class="text-sm text-gray-600">${member.email}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-3">
+                        <span class="px-2 py-1 rounded-full text-xs font-medium
+                            ${member.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                              member.role === 'manager' ? 'bg-blue-100 text-blue-800' :
+                              member.role === 'developer' ? 'bg-green-100 text-green-800' :
+                              'bg-gray-100 text-gray-800'}">
+                            ${member.role === 'admin' ? '👑' : 
+                              member.role === 'manager' ? '👨‍💼' :
+                              member.role === 'developer' ? '👨‍💻' : '👁️'} 
+                            ${member.role.toUpperCase()}
+                        </span>
+                    </td>
+                    <td class="p-3">
+                        <div class="text-sm text-gray-600 max-w-xs">
+                            ${permissionsList}
+                        </div>
+                    </td>
+                    <td class="p-3">
+                        ${canEdit ? `
+                            <div class="flex space-x-2">
+                                <button onclick="changeUserRoleFromPermissions('${username}')" 
+                                        class="text-blue-600 hover:text-blue-800 text-sm px-3 py-1 border border-blue-300 rounded hover:bg-blue-50">
+                                    Change Role
+                                </button>
+                                <button onclick="removeUserFromPermissions('${username}')" 
+                                        class="text-red-600 hover:text-red-800 text-sm px-3 py-1 border border-red-300 rounded hover:bg-red-50">
+                                    Remove
+                                </button>
+                            </div>
+                        ` : '<span class="text-gray-400 text-sm">-</span>'}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function changeUserRoleFromPermissions(username) {
+            const member = teamMembers[username];
+            if (!member) return;
+            
+            const roles = ['viewer', 'developer', 'manager', 'admin'];
+            const roleDescriptions = {
+                'viewer': '👁️ Viewer - Read only access',
+                'developer': '👨‍💻 Developer - Create and manage tasks',
+                'manager': '👨‍💼 Manager - Team management',
+                'admin': '👑 Admin - Full system access'
+            };
+            
+            let roleOptions = roles.map(role => 
+                `<option value="${role}" ${role === member.role ? 'selected' : ''}>${roleDescriptions[role]}</option>`
+            ).join('');
+            
+            const newRole = prompt(`Change role for ${member.name}:\n\nSelect new role:`, member.role);
+            
+            if (newRole && roles.includes(newRole.toLowerCase()) && newRole.toLowerCase() !== member.role) {
+                const permissions = {
+                    'viewer': ['view_only'],
+                    'developer': ['create_tasks', 'edit_own', 'view_assigned'],
+                    'manager': ['manage_team', 'assign_tasks', 'view_all', 'create_tasks'],
+                    'admin': ['all']
+                };
+                
+                member.role = newRole.toLowerCase();
+                member.permissions = permissions[newRole.toLowerCase()];
+                
+                // Update in both systems
+                if (registeredUsers[username]) {
+                    registeredUsers[username].role = member.role;
+                    registeredUsers[username].permissions = member.permissions;
+                }
+                
+                populatePermissionsUsersList();
+                populateTeamMembersList();
+                saveTeamData();
+                saveRegisteredUsers();
+                
+                showSuccessMessage(`${member.name}'s role has been changed to ${newRole}.`);
+            }
+        }
+
+        function removeUserFromPermissions(username) {
+            const member = teamMembers[username];
+            if (!member) return;
+            
+            if (confirm(`Are you sure you want to remove ${member.name} from the system?\n\nThis will delete their account and unassign all their tasks.`)) {
+                // Remove from all systems
+                delete teamMembers[username];
+                delete registeredUsers[username];
+                
+                // Unassign tasks
+                getAllTasks().forEach(task => {
+                    if (task.assignee === username) {
+                        task.assignee = '';
+                    }
+                });
+                
+                populatePermissionsUsersList();
+                populateTeamMembersList();
+                populateAssigneeDropdown();
+                updateTeamAvatars();
+                updateStats();
+                renderTasks();
+                saveTeamData();
+                saveRegisteredUsers();
+                
+                showSuccessMessage(`${member.name} has been removed from the system.`);
+            }
+        }
+
+        // Approval Management Functions
+        function updatePendingApprovalsButton() {
+            const approvalsBtn = document.getElementById('approvalsBtn');
+            const pendingCount = document.getElementById('pendingCount');
+            
+            if (hasPermission('all') && pendingRegistrations.length > 0) {
+                approvalsBtn.style.display = 'block';
+                pendingCount.textContent = pendingRegistrations.length;
+            } else {
+                approvalsBtn.style.display = 'none';
+            }
+        }
+
+        function showPendingApprovals() {
+            if (!hasPermission('all')) {
+                showErrorMessage('You do not have permission to manage approvals.');
+                return;
+            }
+            
+            document.getElementById('approvalsModal').classList.add('active');
+            populatePendingApprovalsList();
+        }
+
+        function closeApprovalsModal() {
+            document.getElementById('approvalsModal').classList.remove('active');
+        }
+
+        function populatePendingApprovalsList() {
+            const container = document.getElementById('pendingApprovalsList');
+            const noApprovalsMessage = document.getElementById('noApprovalsMessage');
+            
+            if (pendingRegistrations.length === 0) {
+                container.innerHTML = '';
+                noApprovalsMessage.style.display = 'block';
+                return;
+            }
+            
+            noApprovalsMessage.style.display = 'none';
+            
+            container.innerHTML = pendingRegistrations.map(registration => `
+                <div class="border border-gray-200 rounded-lg p-4 mb-4 bg-gray-50">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-3 mb-3">
+                                <div class="member-avatar bg-orange-600">${registration.fullName.charAt(0).toUpperCase()}</div>
+                                <div>
+                                    <h3 class="font-semibold text-gray-800">${registration.fullName}</h3>
+                                    <p class="text-sm text-gray-600">${registration.email}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                <div>
+                                    <span class="text-sm font-medium text-gray-700">Username:</span>
+                                    <p class="text-sm text-gray-600">${registration.username}</p>
+                                </div>
+                                <div>
+                                    <span class="text-sm font-medium text-gray-700">Requested Role:</span>
+                                    <p class="text-sm text-gray-600">
+                                        <span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            👨‍💼 ${registration.requestedRole.toUpperCase()}
+                                        </span>
+                                    </p>
+                                </div>
+                                <div>
+                                    <span class="text-sm font-medium text-gray-700">Department:</span>
+                                    <p class="text-sm text-gray-600">${registration.department}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="text-xs text-gray-500">
+                                Requested on: ${registration.requestDate}
+                            </div>
+                        </div>
+                        
+                        <div class="flex space-x-2 ml-4">
+                            <button onclick="approveRegistration('${registration.id}')" 
+                                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                                ✅ Approve
+                            </button>
+                            <button onclick="rejectRegistration('${registration.id}')" 
+                                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                                ❌ Reject
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function approveRegistration(registrationId) {
+            const registration = pendingRegistrations.find(r => r.id === registrationId);
+            if (!registration) return;
+            
+            if (confirm(`Approve ${registration.fullName} as ${registration.requestedRole}?`)) {
+                const permissions = {
+                    'manager': ['manage_team', 'assign_tasks', 'view_all', 'create_tasks']
+                };
+                
+                // Add to registered users
+                registeredUsers[registration.username] = {
+                    name: registration.fullName,
+                    email: registration.email,
+                    password: registration.password,
+                    role: registration.requestedRole,
+                    avatar: registration.fullName.charAt(0).toUpperCase(),
+                    permissions: permissions[registration.requestedRole],
+                    department: registration.department,
+                    joinedAt: new Date().toLocaleDateString(),
+                    status: 'approved'
+                };
+                
+                // Add to team members
+                teamMembers[registration.username] = registeredUsers[registration.username];
+                
+                // Remove from pending
+                pendingRegistrations = pendingRegistrations.filter(r => r.id !== registrationId);
+                
+                // Update UI
+                populatePendingApprovalsList();
+                populateAssigneeDropdown();
+                updateTeamAvatars();
+                updateStats();
+                updatePendingApprovalsButton();
+                
+                // Save data
+                saveRegisteredUsers();
+                savePendingRegistrations();
+                saveTeamData();
+                
+                showSuccessMessage(`${registration.fullName} has been approved and added to the team!`);
+            }
+        }
+
+        function rejectRegistration(registrationId) {
+            const registration = pendingRegistrations.find(r => r.id === registrationId);
+            if (!registration) return;
+            
+            if (confirm(`Reject registration request from ${registration.fullName}?`)) {
+                // Remove from pending
+                pendingRegistrations = pendingRegistrations.filter(r => r.id !== registrationId);
+                
+                // Update UI
+                populatePendingApprovalsList();
+                updatePendingApprovalsButton();
+                
+                // Save data
+                savePendingRegistrations();
+                
+                showSuccessMessage(`Registration request from ${registration.fullName} has been rejected.`);
+            }
+        }
+
+        // Utility functions
+        function togglePassword(inputId) {
+            const passwordInput = document.getElementById(inputId);
+            const eyeIconId = inputId === 'password' ? 'eyeIcon' : 
+                             inputId === 'regPassword' ? 'regEyeIcon' : 'regConfirmEyeIcon';
+            const eyeIcon = document.getElementById(eyeIconId);
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.textContent = '🙈';
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.textContent = '👁️';
+            }
+        }
+
+        function showSuccessMessage(message) {
+            const successMsg = document.createElement('div');
+            successMsg.innerHTML = `✅ ${message}`;
+            successMsg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 max-w-sm';
+            document.body.appendChild(successMsg);
+            
+            setTimeout(() => {
+                if (document.body.contains(successMsg)) {
+                    document.body.removeChild(successMsg);
+                }
+            }, 3000);
+        }
+
+        function showErrorMessage(message) {
+            const errorMsg = document.createElement('div');
+            errorMsg.innerHTML = `❌ ${message}`;
+            errorMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 max-w-sm';
+            document.body.appendChild(errorMsg);
+            
+            setTimeout(() => {
+                if (document.body.contains(errorMsg)) {
+                    document.body.removeChild(errorMsg);
+                }
+            }, 4000);
+        }
+
+        // Event listeners
+        document.addEventListener('click', resetSessionTimer);
+        document.addEventListener('keypress', resetSessionTimer);
+
+        // Remove drag-over class when leaving drop zone
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('[ondragover]').forEach(element => {
+                element.addEventListener('dragleave', function(e) {
+                    if (!this.contains(e.relatedTarget)) {
+                        this.classList.remove('drag-over');
+                    }
+                });
+            });
+        });
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRegisteredUsers();
+            loadPendingRegistrations();
+            checkSession();
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96b6388982891111',t:'MTc1NDU2MzkwOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
